@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Youbube · Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css"/>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body class="app-body">
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="d-flex align-items-center gap-2">
+          <div class="brand-badge">📊</div>
+          <div>
+            <div class="brand-title">Youbube</div>
+            <div class="brand-sub">YouTube CSV Dashboard</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="nav">
+        <button class="nav-btn active" data-target="sec-about">เกี่ยวกับข้อมูล</button>
+        <button class="nav-btn" data-target="sec-steps">ขั้นตอนและวิธีจัดการข้อมูล</button>
+        <button class="nav-btn" data-target="sec-dashboard">แดชบอร์ดข้อมูล</button>
+        <button class="nav-btn" data-target="sec-author">ข้อมูลผู้จัดทำ</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="small text-muted mb-2">Data source: <b>assets/data/youtube.csv</b></div>
+        <button id="logoutBtn" class="btn btn-outline-light w-100">ออกจากระบบ</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="h5 m-0 fw-800" id="pageTitle">เกี่ยวกับข้อมูล</div>
+          <div class="small text-muted" id="pageSubtitle">สรุปภาพรวมชุดข้อมูลและสถานะการทำความสะอาด</div>
+        </div>
+
+        <div class="topbar-right d-flex align-items-center gap-2">
+          <span class="pill-pill">🟣 สดใส · อ่านง่าย</span>
+          <span class="pill-pill" id="loadStatus">กำลังโหลดข้อมูล…</span>
+          <input id="csvFileInput" type="file" accept=".csv,text/csv" style="display:none" />
+          <button id="uploadCsvBtn" class="btn btn-sm btn-outline-brand">อัปโหลด CSV (สำรอง)</button>
+          <button id="exportPdfBtn" class="btn btn-sm btn-brand">Export PDF (รายงาน)</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- ABOUT -->
+        <div class="section show" id="sec-about">
+
+          <div class="panel mb-3">
+            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+              <div>
+                <div class="fw-800">แหล่งข้อมูลที่ใช้งานอยู่</div>
+                <div class="text-muted small" id="dataSourceLine">กำลังพยายามอ่านจาก <b>assets/data/youtube.csv</b> (แนะนำเปิดผ่าน Live Server)</div>
+              </div>
+              <div class="d-flex gap-2">
+                <button id="uploadCsvBtn2" class="btn btn-sm btn-outline-brand">เลือกไฟล์ CSV</button>
+                <button id="useBundledBtn" class="btn btn-sm btn-outline-secondary">ใช้ไฟล์ที่ฝังในเว็บ</button>
+              </div>
+            </div>
+            <div class="small text-muted mt-2">
+              ถ้าข้อมูลไม่ขึ้นบน Mac (CORS) ให้กด “เลือกไฟล์ CSV” แล้วเลือก <b>youtube.csv</b> จากเครื่อง — ไม่ต้องพึ่งการ fetch
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-lg-4">
+              <div class="kpi-card">
+                <div class="kpi-ico">🗂️</div>
+                <div>
+                  <div class="kpi-label">จำนวนข้อมูลทั้งหมด</div>
+                  <div class="kpi-value" id="kpiRows">—</div>
+                  <div class="kpi-sub">แถว (Rows)</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-lg-4">
+              <div class="kpi-card">
+                <div class="kpi-ico">📌</div>
+                <div>
+                  <div class="kpi-label">จำนวนคอลัมน์</div>
+                  <div class="kpi-value" id="kpiCols">—</div>
+                  <div class="kpi-sub">คอลัมน์ (Columns)</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-lg-4">
+              <div class="kpi-card">
+                <div class="kpi-ico">⚠️</div>
+                <div>
+                  <div class="kpi-label">วิดีโอ Error/Removed</div>
+                  <div class="kpi-value" id="kpiErrors">—</div>
+                  <div class="kpi-sub">รายการ</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-12 col-xl-6">
+              <div class="panel">
+                <div class="panel-title">สัดส่วนการทำความสะอาดข้อมูล</div>
+                <div class="row align-items-center g-3">
+                  <div class="col-12 col-md-7">
+                    <canvas id="cleanDonut" height="220"></canvas>
+                    <div class="legend-row mt-2">
+                      <span class="legend-dot dot-a"></span><span>ข้อมูลพร้อมใช้งาน</span>
+                      <span class="ms-3 legend-dot dot-b"></span><span>Error/Removed</span>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-5">
+                    <div class="clean-list">
+                      <div class="clean-item">✅ ตรวจสอบค่าว่าง (Missing Values): <b id="missingTxt">—</b></div>
+                      <div class="clean-item">✅ ตรวจสอบข้อมูลผิดปกติ (Basic Validation): <b>ผ่าน</b></div>
+                      <div class="clean-item">✅ จัดรูปแบบคอลัมน์ (Formatting): <b id="formatTxt">—</b></div>
+                      <div class="clean-item">🎯 สถานะปัจจุบัน: <b id="readyTxt">—</b></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+              <div class="panel">
+                <div class="panel-title">ภาพรวมจากไฟล์ (Quick Facts)</div>
+                <div class="facts-grid">
+                  <div class="fact">
+                    <div class="fact-label">ช่วงวันที่ Trending</div>
+                    <div class="fact-value" id="factDateRange">—</div>
+                  </div>
+                  <div class="fact">
+                    <div class="fact-label">จำนวนวิดีโอไม่ซ้ำ</div>
+                    <div class="fact-value" id="factUniqueVideos">—</div>
+                  </div>
+                  <div class="fact">
+                    <div class="fact-label">จำนวนช่อง (Channel) ไม่ซ้ำ</div>
+                    <div class="fact-value" id="factUniqueChannels">—</div>
+                  </div>
+                  <div class="fact">
+                    <div class="fact-label">จำนวน Category ID</div>
+                    <div class="fact-value" id="factCats">—</div>
+                  </div>
+                  <div class="fact">
+                    <div class="fact-label">ประเทศ (publish_country)</div>
+                    <div class="fact-value" id="factCountries">—</div>
+                  </div>
+                </div>
+
+                <hr class="my-3"/>
+
+                <div class="small text-muted">
+                  * หมายเหตุ: ชุดข้อมูลนี้อ่านจากไฟล์ CSV ที่แนบอยู่ในเว็บ (ไม่ต้องอัปโหลด) และสามารถกรองดูแนวโน้มได้ในแท็บ “แดชบอร์ดข้อมูล”
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-12">
+              <div class="panel">
+                <div class="panel-title">Top Records (จากไฟล์จริง)</div>
+                <div class="row g-3">
+                  <div class="col-12 col-xl-4">
+                    <div class="mini-card">
+                      <div class="mini-h">🏆 ยอดวิวสูงสุด</div>
+                      <div class="mini-t" id="topViewTitle">—</div>
+                      <div class="mini-s" id="topViewMeta">—</div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-xl-4">
+                    <div class="mini-card">
+                      <div class="mini-h">💖 ยอดไลก์สูงสุด</div>
+                      <div class="mini-t" id="topLikeTitle">—</div>
+                      <div class="mini-s" id="topLikeMeta">—</div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-xl-4">
+                    <div class="mini-card">
+                      <div class="mini-h">💬 คอมเมนต์สูงสุด</div>
+                      <div class="mini-t" id="topCommentTitle">—</div>
+                      <div class="mini-s" id="topCommentMeta">—</div>
+                    </div>
+                  </div>
+                </div>
+
+                <hr class="my-3"/>
+
+                <div class="panel-title">คอลัมน์ในไฟล์ (18 คอลัมน์)</div>
+                <div class="chips" id="colChips"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEPS -->
+        <div class="section" id="sec-steps">
+          <div class="panel">
+            <div class="panel-title">ขั้นตอนและวิธีจัดการข้อมูล (อ้างอิงจากไฟล์นี้)</div>
+            <div class="timeline">
+              <div class="tl-item">
+                <div class="tl-dot">1</div>
+                <div class="tl-card">
+                  <div class="tl-title">การรวบรวมข้อมูล</div>
+                  <div class="tl-desc">นำข้อมูลจากไฟล์ <b>youtube.csv</b> มาเป็นแหล่งข้อมูลหลัก เพื่อวิเคราะห์แนวโน้มวิดีโอที่ติด Trending ในแต่ละช่วงเวลา</div>
+                </div>
+              </div>
+
+              <div class="tl-item">
+                <div class="tl-dot">2</div>
+                <div class="tl-card">
+                  <div class="tl-title">การตรวจสอบข้อมูล</div>
+                  <div class="tl-desc">ตรวจสอบชนิดข้อมูลของคอลัมน์ (ตัวเลข/ข้อความ/วันที่/ค่า boolean) และตรวจสอบสถานะ <b>video_error_or_removed</b> เพื่อแยกกรณีที่วิดีโอไม่พร้อมใช้งาน</div>
+                </div>
+              </div>
+
+              <div class="tl-item">
+                <div class="tl-dot">3</div>
+                <div class="tl-card">
+                  <div class="tl-title">การทำความสะอาดข้อมูล</div>
+                  <div class="tl-desc">จัดรูปแบบวันที่ (เช่น trending_date) ให้เป็นมาตรฐาน, ตรวจสอบค่า 0/ผิดช่วงในคอลัมน์ตัวเลข (views/likes/dislikes/comment_count) และเตรียมข้อมูลสำหรับการทำกราฟ</div>
+                </div>
+              </div>
+
+              <div class="tl-item">
+                <div class="tl-dot">4</div>
+                <div class="tl-card">
+                  <div class="tl-title">การจัดหมวดหมู่ข้อมูล</div>
+                  <div class="tl-desc">แบ่งกลุ่มเพื่อการวิเคราะห์ เช่น <b>publish_country</b>, <b>category_id</b>, <b>time_frame</b>, และวันในสัปดาห์ (<b>published_day_of_week</b>)</div>
+                </div>
+              </div>
+
+              <div class="tl-item">
+                <div class="tl-dot">5</div>
+                <div class="tl-card">
+                  <div class="tl-title">สรุปผลและนำเสนอ</div>
+                  <div class="tl-desc">สร้าง KPI และกราฟหลายรูปแบบ (แท่ง/เส้น/โดนัท/สแคตเตอร์) พร้อมตารางข้อมูลแบบแบ่งหน้า เพื่อพรีเซนต์ได้ชัดเจน</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hint mt-3">
+              💡 แนะนำ: เวลาพรีเซนต์ให้เล่าตามลำดับ 1→5 แล้วค่อยเดโมแท็บ “แดชบอร์ดข้อมูล” เพื่อโชว์การกรองแบบเรียลไทม์
+            </div>
+          </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div class="section" id="sec-dashboard">
+
+          <div class="panel mb-3">
+            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+              <div>
+                <div class="fw-800">แหล่งข้อมูลที่ใช้งานอยู่</div>
+                <div class="text-muted small" id="dataSourceLine2">กำลังพยายามอ่านจาก <b>assets/data/youtube.csv</b> (แนะนำเปิดผ่าน Live Server)</div>
+              </div>
+              <div class="d-flex gap-2">
+                <button id="uploadCsvBtnDash" class="btn btn-sm btn-outline-brand">เลือกไฟล์ CSV</button>
+                <button id="useBundledBtnDash" class="btn btn-sm btn-outline-secondary">ใช้ไฟล์ที่ฝังในเว็บ</button>
+              </div>
+            </div>
+            <div class="small text-muted mt-2">
+              ถ้าข้อมูลไม่ขึ้นบน Mac (CORS) ให้กด “เลือกไฟล์ CSV” แล้วเลือก <b>youtube.csv</b> จากเครื่อง — ไม่ต้องพึ่งการ fetch
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <span>แดชบอร์ดข้อมูล (Filters + Charts)</span>
+              <div class="small text-muted">กรองแล้วกราฟ/ตารางจะอัปเดตทันที</div>
+            </div>
+
+            <div class="filters">
+              <div class="filter">
+                <label>ประเทศ (publish_country)</label>
+                <select id="fCountry" class="form-select">
+                  <option value="">ทั้งหมด</option>
+                </select>
+              </div>
+              <div class="filter">
+                <label>Category ID</label>
+                <select id="fCategory" class="form-select">
+                  <option value="">ทั้งหมด</option>
+                </select>
+              </div>
+              <div class="filter">
+                <label>ช่วงเวลา (time_frame)</label>
+                <select id="fTimeframe" class="form-select">
+                  <option value="">ทั้งหมด</option>
+                </select>
+              </div>
+              <div class="filter">
+                <label>วันเผยแพร่ (published_day_of_week)</label>
+                <select id="fWeekday" class="form-select">
+                  <option value="">ทั้งหมด</option>
+                </select>
+              </div>
+              <div class="filter">
+                <label>วันที่ Trending (เริ่ม)</label>
+                <input id="fDateMin" type="date" class="form-control"/>
+              </div>
+              <div class="filter">
+                <label>วันที่ Trending (สิ้นสุด)</label>
+                <input id="fDateMax" type="date" class="form-control"/>
+              </div>
+              <div class="filter filter-actions">
+                <button id="resetBtn" class="btn btn-outline-brand w-100">ล้างตัวกรอง</button>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+              <div class="col-12 col-md-6 col-xl-3">
+                <div class="stat">
+                  <div class="stat-label">จำนวนแถว (หลังกรอง)</div>
+                  <div class="stat-value" id="statRows">—</div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6 col-xl-3">
+                <div class="stat">
+                  <div class="stat-label">ยอดวิวรวม</div>
+                  <div class="stat-value" id="statViews">—</div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6 col-xl-3">
+                <div class="stat">
+                  <div class="stat-label">ยอดไลก์รวม</div>
+                  <div class="stat-value" id="statLikes">—</div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6 col-xl-3">
+                <div class="stat">
+                  <div class="stat-label">คอมเมนต์รวม</div>
+                  <div class="stat-value" id="statComments">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-2">
+              <div class="col-12 col-xl-6">
+                <div class="chart-card">
+                  <div class="chart-title">Top 10 Channels (Views รวม)</div>
+                  <canvas id="chTopChannels" height="260"></canvas>
+                </div>
+              </div>
+              <div class="col-12 col-xl-6">
+                <div class="chart-card">
+                  <div class="chart-title">Distribution by Category ID (Views)</div>
+                  <canvas id="chCategory" height="260"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+              <div class="col-12 col-xl-7">
+                <div class="chart-card">
+                  <div class="chart-title">Trending over Time (จำนวนรายการต่อวัน)</div>
+                  <canvas id="chTrendLine" height="260"></canvas>
+                </div>
+              </div>
+              <div class="col-12 col-xl-5">
+                <div class="chart-card">
+                  <div class="chart-title">Views vs Likes (Sample)</div>
+                  <canvas id="chScatter" height="260"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+              <div class="col-12">
+                <div class="chart-card">
+                  <div class="chart-title">Views by Published Day of Week</div>
+                  <canvas id="chWeekday" height="220"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+              <div class="col-12">
+                <div class="panel">
+                  <div class="panel-title d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span>ตารางข้อมูล (แบ่งหน้า)</span>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-outline-secondary" id="prevPage">ก่อนหน้า</button>
+                      <button class="btn btn-sm btn-outline-secondary" id="nextPage">ถัดไป</button>
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                      <thead>
+                        <tr>
+                          <th>trending_date</th>
+                          <th>title</th>
+                          <th>channel_title</th>
+                          <th>category_id</th>
+                          <th>publish_country</th>
+                          <th class="text-end">views</th>
+                          <th class="text-end">likes</th>
+                          <th class="text-end">comment_count</th>
+                        </tr>
+                      </thead>
+                      <tbody id="dataTable"></tbody>
+                    </table>
+                  </div>
+                  <div class="small text-muted" id="pageInfo">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AUTHOR -->
+        <div class="section" id="sec-author">
+          <div class="row g-3">
+            <div class="col-12 col-xl-7">
+              <div class="panel">
+                <div class="panel-title">ข้อมูลผู้จัดทำ</div>
+                <div class="d-flex gap-3 align-items-start flex-wrap">
+                  <img src="assets/img/avatar.svg" class="avatar" alt="avatar"/>
+                  <div>
+                    
+                    <div class="h4 fw-800 mb-2">คณะผู้จัดทำ</div>
+                    <div class="text-muted mb-3">โครงงานเว็บแดชบอร์ดสำหรับวิเคราะห์ข้อมูลจากไฟล์ YouTube CSV</div>
+
+                    <div class="info-grid">
+                      <div class="info">
+                        <div class="info-k">1) นายวุฒิพงศ์ นามรินทร์</div>
+                        <div class="info-v">ผู้รับผิดชอบด้านการออกแบบและพัฒนาเว็บไซต์ (Website Design & Development)</div>
+                      </div>
+                      <div class="info">
+                        <div class="info-k">2) นางสาวปรินทร แซ่เง่า</div>
+                        <div class="info-v">ผู้รับผิดชอบด้านการจัดการข้อมูลและเตรียมความพร้อมของชุดข้อมูล (Data Preparation & Cleaning)</div>
+                      </div>
+                      <div class="info">
+                        <div class="info-k">ชื่อโปรเจกต์</div>
+                        <div class="info-v">Youbube · YouTube CSV Dashboard</div>
+                      </div>
+                      <div class="info">
+                        <div class="info-k">เครื่องมือ</div>
+                        <div class="info-v">HTML/CSS/JS · Bootstrap · Chart.js · PapaParse</div>
+                      </div>
+                      <div class="info">
+                        <div class="info-k">ชุดข้อมูล</div>
+                        <div class="info-v">ไฟล์ youtube.csv (ฝังในเว็บและดึงมาแสดงผลอัตโนมัติ)</div>
+                      </div>
+                    </div>
+
+                    <div class="hint mt-3">
+                      ✅ สามารถแก้ไขรายชื่อ/หน้าที่ ได้ที่ไฟล์ <code>app.html</code> (แท็บ “ข้อมูลผู้จัดทำ”)
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-5">
+              <div class="panel">
+                <div class="panel-title">คำแนะนำตอนพรีเซนต์ (พูดให้ดูโปร)</div>
+                <ul class="nice-list">
+                  <li>เริ่มจาก “เกี่ยวกับข้อมูล” เพื่อโชว์ขนาดชุดข้อมูล + สถานะความพร้อม</li>
+                  <li>เล่ากระบวนการจัดการข้อมูลตามลำดับในแท็บ “ขั้นตอนและวิธีจัดการข้อมูล”</li>
+                  <li>เดโม “แดชบอร์ดข้อมูล” โดยปรับตัวกรอง 2–3 อย่าง แล้วชี้ให้เห็นว่ากราฟเปลี่ยนทันที</li>
+                  <li>ปิดท้ายด้วย “ข้อมูลผู้จัดทำ” และสรุปคุณค่าของงาน (อ่านง่าย · กรองได้ · เห็นภาพรวมเร็ว)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Defaults from Python (helps show something quickly while loading)
+    window.__DEFAULTS__ = {"rows": 161470, "cols": 18, "error_count": 141, "unique_videos": 55886, "unique_channels": 12361, "countries": ["CANADA", "FRANCE", "GB", "US"], "cat_count": 18, "date_min": "2017-11-14", "date_max": "2018-06-14", "top_view": {"title": "Nicky Jam x J. Balvin - X (EQUIS) | Video Oficial | Prod. Afro Bros & Jeon", "channel_title": "NickyJamTV", "views": 424538912, "publish_country": "GB"}, "top_like": {"title": "BTS (ë°©íƒ„ì†Œë…„ë‹¨) 'FAKE LOVE' Official MV", "channel_title": "ibighit", "likes": 5613827, "publish_country": "US"}, "top_comment": {"title": "So Sorry.", "channel_title": "Logan Paul Vlogs", "comment_count": 1626501, "publish_country": "GB"}};
+  </script>
+
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
